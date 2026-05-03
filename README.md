@@ -32,7 +32,7 @@ A curated collection of PowerShell scripts for IT System Administrators. These s
 
 ## 👤 Author
 
-**Vikas Joshi** — IT System Administrator, Pune, India  
+**Vikas Joshi** — System Admin  
 GitHub: [Predator-VJ](https://github.com/Predator-VJ)
 
 ---
