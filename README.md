@@ -1,134 +1,84 @@
-# 🖥️ PowerShell SysAdmin Scripts
+<div align="center">
 
-A curated collection of PowerShell scripts for IT System Administrators. These scripts help automate common tasks like system health checks, user management, disk monitoring, log cleanup, and more.
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d1117,50:1a1a2e,100:16213e&height=200&section=header&text=PowerShell%20SysAdmin%20Scripts&fontSize=40&fontColor=00d4ff&animation=fadeIn&fontAlignY=35&desc=Automate.%20Monitor.%20Dominate.&descAlignY=55&descSize=18&descColor=a0c4ff" />
+
+</div>
+
+<div align="center">
+
+![PowerShell](https://img.shields.io/badge/PowerShell-5391FE?style=for-the-badge&logo=powershell&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
+![IT SysAdmin](https://img.shields.io/badge/IT%20SysAdmin-00D4FF?style=for-the-badge&logo=windowsterminal&logoColor=white)
+![Scripts](https://img.shields.io/badge/Scripts-10-blueviolet?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)
+
+</div>
+
+<br/>
+
+<div align="center">
+<a href="https://github.com/Predator-VJ/powershell-sysadmin-scripts">
+<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&pause=1000&color=00D4FF&center=true&vCenter=true&multiline=false&width=600&height=40&lines=🖥️+System+Health+Monitoring;👥+User+%26+Account+Management;💾+Disk+%26+Storage+Automation;📋+Event+Log+Analysis;🌐+Network+Connectivity+Tests" alt="Features" />
+</a>
+</div>
+
+<br/>
 
 ---
 
-## 📁 Scripts Overview
+## 📋 &nbsp;Script Arsenal
 
-| Script | Description |
-|--------|-------------|
-| `Get-SystemHealth.ps1` | Checks CPU, RAM, and Disk usage |
-| `Get-DiskReport.ps1` | Generates disk space report for all drives |
-| `Manage-LocalUsers.ps1` | List, create, disable local user accounts |
-| `Monitor-Services.ps1` | Checks and restarts stopped critical services |
-| `Get-EventLogErrors.ps1` | Fetches recent errors from Windows Event Logs |
-| `Clear-TempFiles.ps1` | Cleans up temp files to free disk space |
-| `Get-SystemInventory.ps1` | Collects hardware and OS info and exports to CSV |
-| `Test-NetworkConnectivity.ps1` | Pings a list of hosts and reports status |
-| `Get-WindowsUpdateStatus.ps1` | Checks pending and installed updates, service status |
+<div align="center">
+
+| Script | Description | Category |
+|--------|-------------|----------|
+| `Get-SystemHealth.ps1` | CPU, RAM & Disk usage monitor | 🔍 Monitoring |
+| `Get-DiskReport.ps1` | Disk space report for all drives | 💾 Storage |
+| `Manage-LocalUsers.ps1` | List, create, disable local users | 👥 Users |
+| `Monitor-Services.ps1` | Check & restart stopped services | ⚙️ Services |
+| `Get-EventLogErrors.ps1` | Fetch errors from Windows Event Log | 📋 Logs |
+| `Clear-TempFiles.ps1` | Clean temp files to free disk space | 🧹 Cleanup |
+| `Get-SystemInventory.ps1` | Collect hardware/OS info → CSV | 📦 Inventory |
+| `Test-NetworkConnectivity.ps1` | Ping hosts & report status | 🌐 Network |
+| `Get-WindowsUpdateStatus.ps1` | Check pending & installed updates | 🔄 Updates |
+
+</div>
 
 ---
 
-## 🚀 Installation
-
-### Option 1: Clone the Repository (Recommended)
+## 🚀 &nbsp;Quick Start
 
 ```powershell
-# Clone the repo
+# Clone the repository
 git clone https://github.com/Predator-VJ/powershell-sysadmin-scripts.git
-
-# Navigate to the scripts folder
 cd powershell-sysadmin-scripts
-```
 
-### Option 2: Download as ZIP
-
-1. Click the **Code** button at the top of this repo
-2. Select **Download ZIP**
-3. Extract the ZIP file
-4. Open PowerShell in the extracted folder
-
-### Option 3: Download Individual Scripts
-
-Click on any script file in the repo and use the **Raw** button to copy the content, then save it as a `.ps1` file on your system.
-
----
-
-## ⚙️ Requirements
-
-- Windows 10/11 or Windows Server 2016+
-- Windows PowerShell 5.1+ or PowerShell 7+
-- **Administrator privileges** required for most scripts
-- Git (optional, for cloning the repo)
-
----
-
-## 🔧 How to Run Scripts
-
-### Step 1: Open PowerShell as Administrator
-
-Right-click on **Start** → **Windows PowerShell (Admin)** or **Terminal (Admin)**
-
-### Step 2: Bypass Execution Policy (One-Time Setup)
-
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### Step 3: Navigate to the Scripts Directory
-
-```powershell
-cd C:\path\to\powershell-sysadmin-scripts
-```
-
-### Step 4: Run Any Script
-
-```powershell
+# Run any script (example)
 .\Get-SystemHealth.ps1
-```
-
----
-
-## 📖 Usage Examples
-
-### Check System Health (CPU, RAM, Disk)
-```powershell
-.\Get-SystemHealth.ps1
-```
-
-### Export System Inventory to CSV
-```powershell
-.\Get-SystemInventory.ps1
-```
-
-### Check Windows Update Status
-```powershell
-.\Get-WindowsUpdateStatus.ps1
-```
-
-### Check and Auto-Install Pending Updates
-```powershell
-.\Get-WindowsUpdateStatus.ps1 -InstallAvailable
-```
-
-### Monitor Critical Services (with auto-restart)
-```powershell
+.\Get-DiskReport.ps1
 .\Monitor-Services.ps1
 ```
 
-### List All Local Users
-```powershell
-.\Manage-LocalUsers.ps1 -Action List
-```
+---
 
-### Create a New Local User
-```powershell
-.\Manage-LocalUsers.ps1 -Action Create -Username "john.doe" -Password "P@ssw0rd123!"
-```
+## ⚙️ &nbsp;Requirements
 
-### Test Network Connectivity
-```powershell
-.\Test-NetworkConnectivity.ps1
-```
+- Windows PowerShell 5.1+ or PowerShell 7+
+- Run as **Administrator** for full functionality
+- Execution Policy: `Set-ExecutionPolicy RemoteSigned`
 
 ---
 
-## 🖋️ Author
+## 👤 &nbsp;Author
 
-**Vikas Joshi** — System Admin  
-GitHub: [Predator-VJ](https://github.com/Predator-VJ)
+<div align="center">
 
----
+**Vikas Joshi** — IT SysAdmin | PowerShell Automation Expert
 
-> ⭐ If you find these scripts useful, consider **starring** the repo!
+[![GitHub](https://img.shields.io/badge/GitHub-Predator--VJ-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Predator-VJ)
+
+</div>
+
+<div align="center">
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:16213e,50:1a1a2e,100:0d1117&height=120&section=footer" />
+</div>
