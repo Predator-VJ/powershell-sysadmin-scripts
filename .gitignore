@@ -1,0 +1,31 @@
+# PowerShell output / temp files
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Generated reports
+*.csv
+*.html
+*.json
+!examples/**/*.csv
+!examples/**/*.json
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# PowerShell module artifacts
+*.psd1.bak
+TestResults*.xml
+
+# Local secrets (never commit credentials)
+secrets.ps1
+*.cred
+*.xml.cred
