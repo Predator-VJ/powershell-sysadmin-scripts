@@ -1,23 +1,70 @@
-# Get-DiskReport.ps1
-# Generates a disk space report and optionally exports to CSV
-# Run as Administrator
+<#
+.SYNOPSIS
+    Generates a disk-space report for all fixed drives.
 
+.DESCRIPTION
+    Queries Win32_LogicalDisk via CIM (DriveType=3 = fixed) and emits a
+    PSCustomObject per drive with total / free / used / percent-used.
+    Optionally exports the result to CSV.
+
+.PARAMETER ComputerName
+    Target machine. Defaults to local.
+
+.PARAMETER ExportPath
+    If provided, writes the result as CSV to this path.
+
+.EXAMPLE
+    PS> .\Get-DiskReport.ps1 | Format-Table -AutoSize
+
+.EXAMPLE
+    PS> .\Get-DiskReport.ps1 -ExportPath C:\Temp\disks.csv
+
+.NOTES
+    Author  : Vikas Joshi
+    Requires: PowerShell 5.1+ or 7+.
+#>
+[CmdletBinding()]
+[OutputType([PSCustomObject])]
 param (
-    [string]$ExportPath = "C:\Temp\DiskReport_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
+    [string]$ComputerName = $env:COMPUTERNAME,
+    [string]$ExportPath
 )
 
-Write-Host "===== Disk Space Report =====" -ForegroundColor Cyan
+$cimParams = @{ ErrorAction = 'Stop' }
+if ($ComputerName -and $ComputerName -ne $env:COMPUTERNAME) {
+    $cimParams['ComputerName'] = $ComputerName
+}
 
-$report = Get-WmiObject Win32_LogicalDisk -Filter "DriveType=3" | Select-Object @(
-    @{Name='Drive';     Expression={$_.DeviceID}},
-    @{Name='Total(GB)'; Expression={[math]::Round($_.Size/1GB,2)}},
-    @{Name='Free(GB)';  Expression={[math]::Round($_.FreeSpace/1GB,2)}},
-    @{Name='Used(GB)';  Expression={[math]::Round(($_.Size - $_.FreeSpace)/1GB,2)}},
-    @{Name='Use%';      Expression={[math]::Round((($_.Size - $_.FreeSpace)/$_.Size)*100,2)}}
-)
+try {
+    $report = Get-CimInstance -ClassName Win32_LogicalDisk -Filter 'DriveType=3' @cimParams |
+        ForEach-Object {
+            $totalGB = [math]::Round($_.Size      / 1GB, 2)
+            $freeGB  = [math]::Round($_.FreeSpace / 1GB, 2)
+            $usedGB  = [math]::Round($totalGB - $freeGB, 2)
+            $usePct  = if ($totalGB -gt 0) { [math]::Round(($usedGB / $totalGB) * 100, 2) } else { 0 }
+            [PSCustomObject]@{
+                ComputerName = $ComputerName
+                Drive        = $_.DeviceID
+                VolumeName   = $_.VolumeName
+                TotalGB      = $totalGB
+                UsedGB       = $usedGB
+                FreeGB       = $freeGB
+                UsedPct      = $usePct
+                CollectedAt  = Get-Date
+            }
+        }
 
-$report | Format-Table -AutoSize
+    if ($ExportPath) {
+        $parent = Split-Path -Parent $ExportPath
+        if ($parent -and -not (Test-Path $parent)) {
+            New-Item -ItemType Directory -Path $parent -Force | Out-Null
+        }
+        $report | Export-Csv -Path $ExportPath -NoTypeInformation
+        Write-Verbose "Report exported to: $ExportPath"
+    }
 
-# Export to CSV
-$report | Export-Csv -Path $ExportPath -NoTypeInformation
-Write-Host "Report exported to: $ExportPath" -ForegroundColor Green
+    $report
+}
+catch {
+    Write-Error "Failed to collect disk report: $($_.Exception.Message)"
+}
