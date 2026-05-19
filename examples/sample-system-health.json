@@ -1,0 +1,25 @@
+{
+    "ComputerName": "WS-DESK-01",
+    "CollectedAt": "2026-05-19T10:32:14",
+    "CpuLoadPct": 18.5,
+    "RamTotalGB": 31.85,
+    "RamUsedGB": 14.21,
+    "RamFreeGB": 17.64,
+    "RamUsedPct": 44.61,
+    "Disks": [
+        {
+            "Drive": "C:",
+            "TotalGB": 475.71,
+            "UsedGB": 312.4,
+            "FreeGB": 163.31,
+            "UsedPct": 65.67
+        },
+        {
+            "Drive": "D:",
+            "TotalGB": 931.51,
+            "UsedGB": 102.88,
+            "FreeGB": 828.63,
+            "UsedPct": 11.05
+        }
+    ]
+}

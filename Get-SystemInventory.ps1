@@ -1,37 +1,81 @@
-# Get-SystemInventory.ps1
-# Collects hardware and OS information and exports to CSV
-# Run as Administrator
+<#
+.SYNOPSIS
+    Collects hardware and OS inventory data for the local machine.
 
+.DESCRIPTION
+    Pulls computer system, OS, CPU, BIOS, and IP information via CIM and
+    emits a single PSCustomObject. Optionally exports to CSV.
+
+.PARAMETER ComputerName
+    Target machine. Defaults to local.
+
+.PARAMETER ExportPath
+    If provided, writes the result as CSV to this path.
+
+.EXAMPLE
+    PS> .\Get-SystemInventory.ps1
+
+.EXAMPLE
+    PS> .\Get-SystemInventory.ps1 -ExportPath C:\Temp\inventory.csv
+
+.NOTES
+    Author  : Vikas Joshi
+    Requires: PowerShell 5.1+ or 7+. Administrator recommended.
+#>
+[CmdletBinding()]
+[OutputType([PSCustomObject])]
 param (
-    [string]$ExportPath = "C:\Temp\SystemInventory_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
+    [string]$ComputerName = $env:COMPUTERNAME,
+    [string]$ExportPath
 )
 
-Write-Host "===== System Inventory =====" -ForegroundColor Cyan
-
-$cs   = Get-WmiObject Win32_ComputerSystem
-$os   = Get-WmiObject Win32_OperatingSystem
-$cpu  = Get-WmiObject Win32_Processor | Select-Object -First 1
-$bios = Get-WmiObject Win32_BIOS
-$disk = Get-WmiObject Win32_LogicalDisk -Filter "DriveType=3" |
-        Select-Object DeviceID, @{N='Size(GB)';E={[math]::Round($_.Size/1GB,2)}}
-
-$inventory = [PSCustomObject]@{
-    ComputerName    = $cs.Name
-    Manufacturer    = $cs.Manufacturer
-    Model           = $cs.Model
-    CPU             = $cpu.Name
-    CPUCores        = $cpu.NumberOfCores
-    RAM_GB          = [math]::Round($cs.TotalPhysicalMemory/1GB, 2)
-    OS              = $os.Caption
-    OSVersion       = $os.Version
-    OSArchitecture  = $os.OSArchitecture
-    LastBootTime    = $os.ConvertToDateTime($os.LastBootUpTime)
-    BIOSVersion     = $bios.SMBIOSBIOSVersion
-    SerialNumber    = $bios.SerialNumber
-    IPAddress       = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -ne '127.0.0.1' }).IPAddress -join ', '
-    CollectedAt     = Get-Date
+$cimParams = @{ ErrorAction = 'Stop' }
+if ($ComputerName -and $ComputerName -ne $env:COMPUTERNAME) {
+    $cimParams['ComputerName'] = $ComputerName
 }
 
-$inventory | Format-List
-$inventory | Export-Csv -Path $ExportPath -NoTypeInformation
-Write-Host "Exported to: $ExportPath" -ForegroundColor Green
+try {
+    $cs   = Get-CimInstance -ClassName Win32_ComputerSystem  @cimParams
+    $os   = Get-CimInstance -ClassName Win32_OperatingSystem @cimParams
+    $cpu  = Get-CimInstance -ClassName Win32_Processor       @cimParams | Select-Object -First 1
+    $bios = Get-CimInstance -ClassName Win32_BIOS            @cimParams
+
+    $ipAddresses = @()
+    if (Get-Command -Name Get-NetIPAddress -ErrorAction SilentlyContinue) {
+        $ipAddresses = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+            Where-Object { $_.IPAddress -ne '127.0.0.1' } |
+            Select-Object -ExpandProperty IPAddress
+    }
+
+    $inventory = [PSCustomObject]@{
+        ComputerName   = $cs.Name
+        Manufacturer   = $cs.Manufacturer
+        Model          = $cs.Model
+        Cpu            = $cpu.Name
+        CpuCores       = $cpu.NumberOfCores
+        CpuLogical     = $cpu.NumberOfLogicalProcessors
+        RamGB          = [math]::Round($cs.TotalPhysicalMemory / 1GB, 2)
+        Os             = $os.Caption
+        OsVersion      = $os.Version
+        OsArchitecture = $os.OSArchitecture
+        LastBootTime   = $os.LastBootUpTime
+        BiosVersion    = $bios.SMBIOSBIOSVersion
+        SerialNumber   = $bios.SerialNumber
+        IpAddresses    = ($ipAddresses -join ', ')
+        CollectedAt    = Get-Date
+    }
+
+    if ($ExportPath) {
+        $parent = Split-Path -Parent $ExportPath
+        if ($parent -and -not (Test-Path $parent)) {
+            New-Item -ItemType Directory -Path $parent -Force | Out-Null
+        }
+        $inventory | Export-Csv -Path $ExportPath -NoTypeInformation
+        Write-Verbose "Exported to: $ExportPath"
+    }
+
+    $inventory
+}
+catch {
+    Write-Error "Failed to collect inventory: $($_.Exception.Message)"
+}

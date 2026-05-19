@@ -1,35 +1,83 @@
-# Manage-LocalUsers.ps1
-# List, create, or disable local Windows user accounts
-# Run as Administrator
+<#
+.SYNOPSIS
+    Lists, creates, or disables local Windows user accounts.
 
+.DESCRIPTION
+    Wraps the Microsoft.PowerShell.LocalAccounts module to perform common
+    user-management tasks. Supports -WhatIf and -Confirm for state-changing
+    actions (Create, Disable).
+
+.PARAMETER Action
+    One of List, Create, or Disable.
+
+.PARAMETER Username
+    Account name (required for Create and Disable).
+
+.PARAMETER Password
+    SecureString password (required for Create). Use Read-Host -AsSecureString
+    or Get-Credential to obtain one safely. Plaintext is intentionally not
+    accepted.
+
+.PARAMETER FullName
+    Optional display name when creating an account.
+
+.EXAMPLE
+    PS> .\Manage-LocalUsers.ps1 -Action List
+
+.EXAMPLE
+    PS> $securePwd = Read-Host -AsSecureString
+    PS> .\Manage-LocalUsers.ps1 -Action Create -Username 'svc-app' -Password $securePwd
+
+.EXAMPLE
+    PS> .\Manage-LocalUsers.ps1 -Action Disable -Username 'oldUser' -WhatIf
+
+.NOTES
+    Author  : Vikas Joshi
+    Requires: Run as Administrator. Microsoft.PowerShell.LocalAccounts module.
+#>
+[CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+[OutputType([PSCustomObject])]
 param (
-    [ValidateSet('List','Create','Disable')]
-    [string]$Action = 'List',
-    [string]$Username = '',
-    [string]$Password = ''
+    [Parameter(Mandatory = $true)]
+    [ValidateSet('List', 'Create', 'Disable')]
+    [string]$Action,
+
+    [string]$Username,
+
+    [securestring]$Password,
+
+    [string]$FullName
 )
+
+if (-not (Get-Module -ListAvailable -Name Microsoft.PowerShell.LocalAccounts)) {
+    throw "Microsoft.PowerShell.LocalAccounts is not available. Requires Windows 10 / Server 2016 or later."
+}
 
 switch ($Action) {
     'List' {
-        Write-Host "===== Local User Accounts =====" -ForegroundColor Cyan
-        Get-LocalUser | Select-Object Name, Enabled, LastLogon, PasswordLastSet | Format-Table -AutoSize
+        Get-LocalUser | Select-Object Name, Enabled, LastLogon, PasswordLastSet, Description
     }
+
     'Create' {
         if (-not $Username -or -not $Password) {
-            Write-Error "Please provide -Username and -Password to create a user."
-            exit 1
+            throw "Action 'Create' requires both -Username and -Password (SecureString)."
         }
-        $secPwd = ConvertTo-SecureString $Password -AsPlainText -Force
-        New-LocalUser -Name $Username -Password $secPwd -FullName $Username -Description "Created by SysAdmin Script"
-        Add-LocalGroupMember -Group "Users" -Member $Username
-        Write-Host "User '$Username' created successfully." -ForegroundColor Green
+        if ($PSCmdlet.ShouldProcess($Username, 'Create local user')) {
+            $name = if ($FullName) { $FullName } else { $Username }
+            New-LocalUser -Name $Username -Password $Password -FullName $name `
+                -Description 'Created by Manage-LocalUsers.ps1' | Out-Null
+            Add-LocalGroupMember -Group 'Users' -Member $Username
+            Get-LocalUser -Name $Username
+        }
     }
+
     'Disable' {
         if (-not $Username) {
-            Write-Error "Please provide -Username to disable."
-            exit 1
+            throw "Action 'Disable' requires -Username."
         }
-        Disable-LocalUser -Name $Username
-        Write-Host "User '$Username' has been disabled." -ForegroundColor Yellow
+        if ($PSCmdlet.ShouldProcess($Username, 'Disable local user')) {
+            Disable-LocalUser -Name $Username
+            Get-LocalUser -Name $Username
+        }
     }
 }

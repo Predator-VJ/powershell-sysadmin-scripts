@@ -1,32 +1,81 @@
-# Get-SystemHealth.ps1
-# Displays CPU, RAM, and Disk usage summary
-# Run as Administrator
+<#
+.SYNOPSIS
+    Reports current CPU, RAM, and disk usage for the local machine.
 
-Write-Host "===== System Health Report ====" -ForegroundColor Cyan
-Write-Host "Date: $(Get-Date)" -ForegroundColor Gray
-Write-Host ""
+.DESCRIPTION
+    Gathers system health metrics using CIM (the modern replacement for WMI):
+        - Average CPU load percentage across all logical processors.
+        - Physical memory total / used / free in GB.
+        - Per-drive disk usage for all FileSystem PSDrives.
+    Emits a single PSCustomObject so output can be piped to Format-Table,
+    Export-Csv, ConvertTo-Json, etc.
 
-# CPU Usage
-$cpu = Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average
-Write-Host "CPU Usage       : $([math]::Round($cpu.Average, 2)) %" -ForegroundColor Yellow
+.PARAMETER ComputerName
+    Optional. Target a remote machine (requires WinRM enabled and rights).
+    Defaults to the local computer.
 
-# RAM Usage
-$os = Get-WmiObject Win32_OperatingSystem
-$totalRAM = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2)
-$freeRAM  = [math]::Round($os.FreePhysicalMemory / 1MB, 2)
-$usedRAM  = [math]::Round($totalRAM - $freeRAM, 2)
-$ramPct   = [math]::Round(($usedRAM / $totalRAM) * 100, 2)
-Write-Host "RAM Total       : $totalRAM GB" -ForegroundColor Green
-Write-Host "RAM Used        : $usedRAM GB ($ramPct %)" -ForegroundColor Green
-Write-Host "RAM Free        : $freeRAM GB" -ForegroundColor Green
-Write-Host ""
+.EXAMPLE
+    PS> .\Get-SystemHealth.ps1
+    Returns a health-report object for the local machine.
 
-# Disk Usage
-Write-Host "--- Disk Usage ---" -ForegroundColor Cyan
-Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Used -ne $null } | ForEach-Object {
-    $total = [math]::Round(($_.Used + $_.Free) / 1GB, 2)
-    $used  = [math]::Round($_.Used / 1GB, 2)
-    $free  = [math]::Round($_.Free / 1GB, 2)
-    $pct   = if ($total -gt 0) { [math]::Round(($used / $total) * 100, 2) } else { 0 }
-    Write-Host "Drive $($_.Name): Total=$total GB | Used=$used GB | Free=$free GB | Usage=$pct%"
+.EXAMPLE
+    PS> .\Get-SystemHealth.ps1 | ConvertTo-Json -Depth 4
+    JSON-formatted output suitable for monitoring pipelines.
+
+.NOTES
+    Author  : Vikas Joshi
+    Requires: PowerShell 5.1+ or 7+. Administrator recommended for full data.
+#>
+[CmdletBinding()]
+[OutputType([PSCustomObject])]
+param (
+    [string]$ComputerName = $env:COMPUTERNAME
+)
+
+$cimParams = @{ ErrorAction = 'Stop' }
+if ($ComputerName -and $ComputerName -ne $env:COMPUTERNAME) {
+    $cimParams['ComputerName'] = $ComputerName
+}
+
+try {
+    # CPU: average load across all processors
+    $cpuLoad = (Get-CimInstance -ClassName Win32_Processor @cimParams |
+        Measure-Object -Property LoadPercentage -Average).Average
+
+    # Memory: TotalVisibleMemorySize and FreePhysicalMemory are in KILOBYTES
+    $os         = Get-CimInstance -ClassName Win32_OperatingSystem @cimParams
+    $totalRamGB = [math]::Round(($os.TotalVisibleMemorySize * 1KB) / 1GB, 2)
+    $freeRamGB  = [math]::Round(($os.FreePhysicalMemory      * 1KB) / 1GB, 2)
+    $usedRamGB  = [math]::Round($totalRamGB - $freeRamGB, 2)
+    $ramPct     = if ($totalRamGB -gt 0) { [math]::Round(($usedRamGB / $totalRamGB) * 100, 2) } else { 0 }
+
+    # Disk: enumerate fixed drives via CIM (DriveType=3)
+    $disks = Get-CimInstance -ClassName Win32_LogicalDisk -Filter 'DriveType=3' @cimParams |
+        ForEach-Object {
+            $totalGB = [math]::Round($_.Size      / 1GB, 2)
+            $freeGB  = [math]::Round($_.FreeSpace / 1GB, 2)
+            $usedGB  = [math]::Round($totalGB - $freeGB, 2)
+            $usePct  = if ($totalGB -gt 0) { [math]::Round(($usedGB / $totalGB) * 100, 2) } else { 0 }
+            [PSCustomObject]@{
+                Drive    = $_.DeviceID
+                TotalGB  = $totalGB
+                UsedGB   = $usedGB
+                FreeGB   = $freeGB
+                UsedPct  = $usePct
+            }
+        }
+
+    [PSCustomObject]@{
+        ComputerName = $ComputerName
+        CollectedAt  = Get-Date
+        CpuLoadPct   = [math]::Round([double]$cpuLoad, 2)
+        RamTotalGB   = $totalRamGB
+        RamUsedGB    = $usedRamGB
+        RamFreeGB    = $freeRamGB
+        RamUsedPct   = $ramPct
+        Disks        = $disks
+    }
+}
+catch {
+    Write-Error "Failed to collect system health: $($_.Exception.Message)"
 }
